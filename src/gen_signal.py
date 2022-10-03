@@ -102,12 +102,23 @@ def get_response_from_simply_supported_beam(
 
     Parameters:
     ----------
-        struct_params: _description_
-        analysis_params: _description_
-        load_params: _description_
+    `struct_params`: dict, structure parameters
+    `analysis_params`: dict, analysis parameters
+    `load_params`: dict, load parameters
 
     Returns:
     -------
+    dict:
+        {
+            "disp":         # node displacement
+            "vel":          # node velocity
+            "acc":          # node acceleration
+            "time":         # time vector
+            "freq":         # FEM frequency, unit: Hz
+            "freq_theory":  # theoretical frequency, # unit: Hz
+            "damp_r":       # damping ratio, %
+            "mode":         # modal shape matrix, channels*orders
+        }
         
     """
     # remove existing model
@@ -263,6 +274,7 @@ def plot_damped_signal(figsize, signal):
     ax.plot(t, noise, color='#0f0f0f')
     ax.legend(['y', 'noise'])
     ax.set_xlabel('Time/s')
+    ax.set_title('Artificial amped signal')
 
     ax = fig.add_subplot(1, 2, 2)
     n = len(t)
@@ -270,6 +282,8 @@ def plot_damped_signal(figsize, signal):
     xf = rfftfreq(n, 1/fs)
     ax.plot(xf, np.abs(Yf), '.-', markersize=2)
     ax.set_xlabel('Frequency/Hz')
+    ax.set_title('FFT spectrum')
+    
     plt.show(block=True)
     return fig
 
@@ -282,6 +296,7 @@ def plot_mode(figsize, mode):
     ax.plot(loc, mode, 'o-', markersize=3)
     ax.plot(loc, np.zeros(loc.shape), ls='--', c='#454545')
     ax.legend([f'mode {i+1}' for i in range(n)])
+    ax.set_title('Modes of the simply supported beam')
     plt.show(block=True)
     return fig
 
@@ -296,6 +311,7 @@ def plot_response(figsize, time, sig, sensor_locs, fs, t_start=0):
     ax.legend()
     ax.set_ylabel('Node acc.')
     ax.set_xlabel('Time/s')
+    ax.set_title('Responses of the simply supported beam')
 
     ax = fig.add_subplot(1, 2, 2)
     n = sig[a:, :].shape[0]
@@ -305,6 +321,7 @@ def plot_response(figsize, time, sig, sensor_locs, fs, t_start=0):
         ax.semilogy(xf, np.abs(Yf), '.-', label=f'node: {s:1d}', markersize=2)
     ax.set_ylabel('Spectrum of node acc.')
     ax.set_xlabel('Frequency/Hz')
+    ax.set_title('FFT spectrum')
     plt.show(block=True)
     return fig
 
@@ -362,13 +379,14 @@ if __name__ == '__main__':
     
     plot_mode((8, 4), res0['mode'])
     
-    res_FEM = pd.DataFrame({
-        # "Theoretical freqency": res0['freq_theory'],
+    print('Frequency and damping ratio of the beam:')
+    print(pd.DataFrame({
+        "Theoretical freqency": res0['freq_theory'],
         "Freqency": res0['freq'],
         "Damping ratio": res0['damp_r'],
         "Damping factor": 2*np.pi*res0['freq']*res0['damp_r']
-    })
-    print(res_FEM)
+    }))
+    
     plot_response((12, 4), res0['time'], res0['acc'][:, sensor_locs], 
                   sensor_locs, analysis_params['fs'], t_start=0.51)
     # vibration_movie((12, 4), res0['disp'])
