@@ -4,13 +4,15 @@ from scipy.fft import rfft, rfftfreq, irfft
 from scipy.signal import hilbert
 from utils.utils import get_params_from_monoharmonic, err_in_percent
 
-def VMD(sig, fs, alpha, tau, K, DC, init, freq0, tol, fix_freq):
+def VMD(sig, fs, alpha, tau, K, DC, init, freq0, tol, fix_freq=False):
     """ VMD, translated from the matlab code. Some changes are made.
          
     Parameters:
     ----------
-    `sig``:
+    `sig`:
         the time domain signal (1D) to be decomposed
+    `fs`:
+        sampling rate
     `alpha`:
         the balancing parameter of the data-fidelity constraint
     `tau`:
@@ -23,10 +25,15 @@ def VMD(sig, fs, alpha, tau, K, DC, init, freq0, tol, fix_freq):
         0 = all omegas start at 0, 
         1 = all omegas start uniformly distributed,
         2 = all omegas initialized randomly
-        else = specified
+        else = specified initial values `freq0`
+    `freq0`:
+        initial frequency by specified
     `tol`:
         tolerance of convergence criterion; typically around 1e-6
-        
+    `fix_freq`:
+        if optimize frequency, `False` the frequency is fixed as the initial 
+        values. If `init=0, 1, or 2`, fix_freq should False.   
+             
     Returns:
     -------
     dict :
