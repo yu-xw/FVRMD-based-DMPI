@@ -44,7 +44,6 @@ def err_in_percent(x_t, x):
     """
     return (x - x_t) / x_t * 100
 
-# calculate snr
 def snr(sig, noise): 
     """Compute signal-to-noise-ratio (snr).
 
@@ -55,19 +54,54 @@ def snr(sig, noise):
 
     Returns:
     -------
-    snr: SNR in dB
+    `snr`: SNR in dB
     """
     return 10 * np.log10(la.norm(sig)**2 / la.norm(noise)**2)
 
-# white noise
 def get_noise(size, noise_std, seed):
+    """Get a white noise.
+
+    Parameters:
+    ----------
+    `size`: legnth
+    `noise_std`: noise standart deviation
+    `seed`: random seed
+
+    Returns:
+    --------
+    `noise` ~ N(0, σ**2)
+    """
     rng = default_rng(seed)
     return rng.normal(0, noise_std, size)
 
 def construct_component(amp, damp_r, freq, phase, t):
+    """Construct a damped signal as: y=a*exp(-ωζt)*cos(ωt+φ).
+
+    Parameters:
+    -----------
+    `amp`: initial amplitude
+    `damp_r`: damping ratio
+    `freq`: frequency, in rad/s
+    `phase`: initial phase
+    `t`: time vector
+    
+    """
     return amp * np.exp(-freq * damp_r * t) * np.cos(freq * t + phase)
 
 def get_params_from_monoharmonic(u, t, seg=(1/3, 2/3)):
+    """Estimate parameters of a harmonic signal.
+
+    Parameters:
+    ----------
+    `u`: signal
+    `t`: time vector
+    `seg`: To intercept the original signal. Defaults to (1/3, 2/3).
+
+    Returns:
+    -------
+    amplitude, damping ratio, frequency, phase
+    
+    """
     N = len(u)
     a = int(seg[0] * N)
     b = int(seg[1] * N)
@@ -139,13 +173,11 @@ def params_assemble(amp, damp_r, freq, phase, ref=0, method='max'):
         freq = [freq[:, i].T @ W[:, i] / W[:, i].sum() for i in range(K)]
         damp_r = [damp_r[:, i].T @ W[:, i] / W[:, i].sum() for i in range(K)]
     
-    
     return {
         "freq": freq,
         "damp_r": damp_r,
         "mode": mode
     }
-    
     
 def get_MAC(phi_t, phi_e):
     """Compute the MAC value of two modal shape
