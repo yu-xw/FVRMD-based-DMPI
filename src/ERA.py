@@ -31,6 +31,7 @@ def ERA(Y, nin, order, fs):
             "damp_r":       in %
             "mode":         channels x orders
         }
+        
     """
 
     r = 2 * order
