@@ -3,16 +3,13 @@ import numpy as np
 import scipy.linalg as la
 import scipy.sparse as sp
 import scipy.sparse.linalg as sla
-import time
-
 from utils.utils import variational_operator, err_in_percent, construct_component
 
-# joint, adaptive seg_length
 def FVRMD(y, fs, damp_r, freq, n_seg, 
           alpha=1e2, beta=0.5, gamma=10, 
           delta_damp_r=0.01, tau=1e-8, r=1, 
           delta_diff=1e-8,delta_reg=1e-8, max_iters=100, 
-          seg=(1/4, 3/4), quite=False):
+          seg=(1/4, 3/4), quite=True):
     """ FVRMD algorithm, for full parameters (frequency, damping ratio, initial
     amplitude, initial phase) identification from multi-DOF free vibration 
     responses.
@@ -85,7 +82,7 @@ def FVRMD(y, fs, damp_r, freq, n_seg,
     K = len(freq)
     t = np.linspace(0, n/fs, n, endpoint=False)
     
-    # pre_calculate
+    # pre_calculation
     T = [variational_operator(ns, r) for ns in n_seg]
     D = [sp.csc_array(np.block([[T, np.zeros_like(T)],
                                 [np.zeros_like(T), T]])) for T in T]
@@ -155,6 +152,7 @@ def FVRMD(y, fs, damp_r, freq, n_seg,
             # calculate amplitude and phase
             amp[k] = np.mean(np.sqrt(ss)[aa:bb])
             phase[k] = np.mean(np.unwrap(np.angle(X[:ns, k]-X[ns:2*ns, k]*1j))[aa:bb])
+            
             # update y_k
             Y[:, k] = construct_component(
                 amp[k], damp_r[k], freq[k], phase[k], t)
@@ -169,16 +167,8 @@ def FVRMD(y, fs, damp_r, freq, n_seg,
         lambd += tau * (y - np.sum(Y, axis=1))
             
         # adaptive growth of `alpha`
-        # alpha0 *= alpha_rate
-        # gamma = gamma * la.norm(y)**2 / loss_rec
         rate = 10**(2*np.arctan(jj/gamma))
-        # rate = (np.exp(np.log(10**3)/(3+np.pi/2))) ** (np.arctan((jj-20)/2)+3)
         alpha[rk] = rate * alpha_init
-        # rr = [(la.norm(Y[:n_seg[k], k])**2 / la.norm(y[:n_seg[k]] - Y[:n_seg[k], k])**2) for k in rk]
-        # rr = 1/amp[rk] * freq[rk] * damp_r[rk]
-        # rr /= np.max(rr)
-        # rr = 1
-        # alpha[rk] *= rr
 
         # intermediate output
         if not quite:
@@ -205,9 +195,6 @@ def FVRMD(y, fs, damp_r, freq, n_seg,
                 rk = np.delete(rk, np.where(rk == k)[0][0])  # exclude
                 for item in list(Log.keys())[1:]:
                     Log[item][i+1:, k] = None
-                # alpha[rk] = alpha_init
-                # jj = 0
-                # gamma = 100
         
         if len(rk) == 0:
             break
@@ -244,48 +231,35 @@ def construct_A(damp_r, freq, t):
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     import pandas as pd
+    import time
     from gen_signal import *
     from ERA import ERA
     
     fs = 100
     K = 3
-    sig = get_damped_signal(K, T=20, fs=fs, noise_std=1, seed=324)
+    sig = get_damped_signal(K, T=20, fs=fs, noise_std=0, seed=324)
     
-    
-    Res_ERA = ERA(sig['y'][:500].reshape(-1, 1), nin=1, order=K, fs=fs)
-    Res = Res_ERA
+    Res = ERA(sig['y'][:500].reshape(-1, 1), nin=1, order=K, fs=fs)
     print('Results by ERA:')
     print(pd.DataFrame({
         "Damping ratio": Res['damp_r'],
         "Error_d": err_in_percent(sig['damp_r'], Res['damp_r']),
         "Freqency": Res['freq'],
         "Error_f (%)": err_in_percent(sig['freq'], Res['freq'])
-    }))
-
-    freq = Res_ERA['freq']
-    damp_r = np.zeros_like(freq)
+    })) 
     
     #%%
     t1 = time.time()
-    a0 = 1/freq * fs * 10
-    a =  1/freq * fs * (-np.log(0.25) / (Res_ERA['damp_r']*2*np.pi))
-    a1 = 1/freq * fs * 15
-    print(pd.DataFrame({
-        'a0': a0,
-        "a": a,
-        "a1": a1
-    }))
-    a[a<a0] = a0[a<a0]
-    a[a>a1] = a1[a>a1]
+    freq = Res['freq']
+    damp_r = np.zeros_like(freq)
+    a = 1/freq * fs * 15
+    # a = [500, 360, 240]
     n_seg = np.array(a, dtype=int)
-    print(f'segments are {n_seg}')
-    Res_FVRMD, Log = FVRMD(sig['y'], fs=fs, damp_r=damp_r, freq=freq,
-                            n_seg=n_seg, alpha=1e2, beta=0.5,
-                            delta_damp_r=0.01,
-                            seg=(0, 1), gamma=20, quite=True)
+    print(f'Segments in FVRMD are {n_seg}')
+    Res, Log = FVRMD(sig['y'], fs=fs, damp_r=damp_r, freq=freq,
+                     gamma=50, n_seg=n_seg, quite=False)
     t2 = time.time() - t1
     
-    Res = Res_FVRMD
     print('Results by FVRMD:')
     print(pd.DataFrame({
         "amplitude": Res['amp'],
@@ -305,7 +279,6 @@ if __name__ == '__main__':
     fig, axs = plt.subplots(K+1, 1, tight_layout=True)
     for i in range(K):
         axs[i].plot(Res['Y'][:, i], '--', lw=1, label='extracted')
-        # axs[i].plot(Res['Y_rec'][:, i], '-.', lw=1, label='reconstructed')
         temp = sig['Y'][:, i]
         axs[i].plot(temp, '-.', lw=1, label='truth')
         axs[i].legend()
@@ -317,12 +290,10 @@ if __name__ == '__main__':
         
     # damp
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, tight_layout=True)
-    # lns = ax1.plot(np.log(Log['damp']), marker='.')
     lns = ax1.plot(Log['damp_r'], marker='.')
     [lns[i].set_color(c) for i, c in enumerate(('r', 'g', 'b'))]
     lns = ax1.plot(np.ones_like(Log['damp_r']) * sig['damp_r'], '--')
     [lns[i].set_color(c) for i, c in enumerate(('r', 'g', 'b'))]
-    # ax1.legend([1, 2, 3, -1, -2, -3])
     ax1.grid()
     ax1.set_title('varying damp ratio')
     lns = ax2.plot((Log['alpha']), marker='.')
@@ -331,7 +302,6 @@ if __name__ == '__main__':
     ax2.set_title('varying alpha')
     lns = ax3.plot(-np.log10(Log['loss_reg']), '--', marker='.')
     [lns[i].set_color(c) for i, c in enumerate(('r', 'g', 'b'))]
-    # ax3.legend([1, 2, 3, -1, -2, -3])
     ax3.grid()
     ax3.set_title('varying loss_reg')
     plt.show()
