@@ -100,10 +100,7 @@ def VMD(sig, fs, alpha, tau, K, DC, init, freq0, tol, fix_freq=False):
                 lambda_hat/2) / (1 + Alpha[k] * (freq - freq_plus[n, k])**2)
             if fix_freq:
                 freq_plus[n+1, k] = freq0[k]
-            elif k == 0 and ~DC:
-                spec_2 = np.abs(u_hat[:, k])**2
-                freq_plus[n+1, k] = (freq @ spec_2) / np.sum(spec_2)
-            elif k > 0:
+            elif (k == 0 and ~DC) or k > 0:
                 spec_2 = np.abs(u_hat[:, k])**2
                 freq_plus[n+1, k] = (freq @ spec_2) / np.sum(spec_2)
 
