@@ -5,10 +5,8 @@ import pandas as pd
 from scipy.fft import rfft, rfftfreq
 import openseespy.opensees as ops
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import animation
-import seaborn as sns
 from IPython.display import HTML
 
 # --------------------------------------------------------------- #

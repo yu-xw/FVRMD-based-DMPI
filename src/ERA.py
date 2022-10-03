@@ -2,7 +2,6 @@ import itertools
 import numpy as np
 import numpy.linalg as la
 
-
 def ERA(Y, nin, order, fs):
     """ 
     `ERA` algorithm, translated from the matlab code. Some changes are made.
