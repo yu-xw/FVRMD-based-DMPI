@@ -60,7 +60,7 @@ def FVRMD(y, fs, damp_r, freq, n_seg,
             'amp':           # initial amplitude
             'damp_r':        # damping ratio, in %
             'freq':          # frequency, in Hz
-            'phase':         # initial phase, in rad/s
+            'phase':         # initial phase, in rad
         }
     `Log`: dict, record the intermediate results during iterations
         {
